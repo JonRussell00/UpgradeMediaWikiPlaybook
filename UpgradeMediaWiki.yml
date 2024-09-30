@@ -1,0 +1,158 @@
+---
+- name: Upgrade MediaWiki
+  hosts: wikiserver
+  become: yes
+
+##
+## Ansible Playbook to upgrade MediaWiki from one version to the next.
+## Written for Ubuntu and Apache2.
+## Assumes the root of the MediaWiki install is in /var/www/virtual/mediawiki-X.XX.X/
+## Switch versions by updating /etc/apache2/sites-available/001-wiki.conf to point to the new document root.
+## The output of the update command is captured and written to a log on the server in /tmp/
+##
+## Written by Jon Russell September 2024
+##
+
+  vars:
+    mediawiki_download_url: "https://releases.wikimedia.org/mediawiki"
+    mediawiki_target_dir: "/var/www/virtual"
+
+    ## Uncomment the section you need to upgrade from version X.XX.X to Y.YY.Y
+    ## mediawiki_download_file: the filename of the download in the form : "mediawiki-Y.YY.Y"
+    ## mediawiki_download_dir: the directory name in the download URL in the form "Y.YY"
+    ## mediawiki_old_dir: the name of the existing mediawiki directory on disk in the form "mediawiki-X.XX.X"
+    ## update_command: The command to run after the update is complete. This changed between 1.39 & 1.40
+
+    ## To upgrade version 1.38.0 to 1.39.8
+    ## Source: https://releases.wikimedia.org/mediawiki/1.39/mediawiki-1.39.8.tar.gz
+    #mediawiki_download_file: "mediawiki-1.39.8"
+    #mediawiki_download_dir: "1.39"
+    #mediawiki_old_dir: "mediawiki-1.38.0"
+    #update_command: "php /var/www/virtual/mediawiki-1.39.8/maintenance/update.php"
+
+    ## To upgrade version 1.39.8 to 1.41.2
+    ## Source: https://releases.wikimedia.org/mediawiki/1.41/mediawiki-1.41.2.tar.gz
+    #mediawiki_download_file: "mediawiki-1.41.2"
+    #mediawiki_download_dir: "1.41"
+    #mediawiki_old_dir: "mediawiki-1.39.8"
+    #update_command: "php /var/www/virtual/mediawiki-1.41.2/maintenance/run.php update.php"
+
+    ## To upgrade version 1.41.2 to 1.42.1
+    ## Source: https://releases.wikimedia.org/mediawiki/1.42/mediawiki-1.42.1.tar.gz
+    mediawiki_download_file: "mediawiki-1.42.1"
+    mediawiki_download_dir: "1.42"
+    mediawiki_old_dir: "mediawiki-1.41.2"
+    update_command: "php /var/www/virtual/mediawiki-1.42.1/maintenance/run.php update.php"
+
+  tasks:
+    - name: Download the new MediaWiki tarball
+      get_url:
+        url: "{{ mediawiki_download_url }}/{{ mediawiki_download_dir }}/{{ mediawiki_download_file }}.tar.gz"
+        dest: /tmp/
+
+    - name: Extract MediaWiki tarball to the target directory
+      unarchive:
+        src: "/tmp/{{ mediawiki_download_file }}.tar.gz"
+        dest: "{{ mediawiki_target_dir }}/"
+        remote_src: yes
+
+    - name: Set correct permissions for MediaWiki directory
+      file:
+        path: "{{ mediawiki_target_dir }}/{{ mediawiki_download_file }}"
+        state: directory
+        recurse: yes
+        owner: www-data
+        group: www-data
+
+    - name: Copy files from old to new (/images/*)
+      #/bin/cp -f -r ./mediawiki-X.XX.X/images/* ./mediawiki-Y.YY.Y/images/
+      ansible.builtin.copy:
+        src: "{{ mediawiki_target_dir }}/{{ mediawiki_old_dir }}/images"
+        dest: "{{ mediawiki_target_dir }}/{{ mediawiki_download_file }}/"
+        owner: www-data
+        group: www-data
+        remote_src: true
+
+    - name: Copy files from old to new (LocalSettings.php)
+      #/bin/cp -f ./mediawiki-X.XX.X/LocalSettings.php ./mediawiki-Y.YY.Y/
+      ansible.builtin.copy:
+        src: "{{ mediawiki_target_dir }}/{{ mediawiki_old_dir }}/LocalSettings.php"
+        dest: "{{ mediawiki_target_dir }}/{{ mediawiki_download_file }}/"
+        owner: www-data
+        group: www-data
+        remote_src: true
+
+    - name: Copy files from old to new (/resources/assets/logo.gif)
+      #/bin/cp -f ./mediawiki-X.XX.X/resources/assets/logo.gif ./mediawiki-Y.YY.Y/resources/assets/
+      ansible.builtin.copy:
+        src: "{{ mediawiki_target_dir }}/{{ mediawiki_old_dir }}/resources/assets/logo.gif"
+        dest: "{{ mediawiki_target_dir }}/{{ mediawiki_download_file }}/resources/assets/"
+        owner: www-data
+        group: www-data
+        remote_src: true
+
+    - name: Copy files from old to new (/extensions/googleAnalytics)
+      #/bin/cp -r ./mediawiki-X.XX.X/extensions/googleAnalytics ./mediawiki-Y.YY.Y/extensions/
+      ansible.builtin.copy:
+        src: "{{ mediawiki_target_dir }}/{{ mediawiki_old_dir }}/extensions/googleAnalytics"
+        dest: "{{ mediawiki_target_dir }}/{{ mediawiki_download_file }}/extensions/"
+        owner: www-data
+        group: www-data
+        remote_src: true
+
+    - name: Copy files from old to new (/extensions/ConfirmAccount)
+      #/bin/cp -r ./mediawiki-X.XX.X/extensions/ConfirmAccount ./mediawiki-Y.YY.Y/extensions/
+      ansible.builtin.copy:
+        src: "{{ mediawiki_target_dir }}/{{ mediawiki_old_dir }}/extensions/ConfirmAccount"
+        dest: "{{ mediawiki_target_dir }}/{{ mediawiki_download_file }}/extensions/"
+        owner: www-data
+        group: www-data
+        remote_src: true
+
+    - name: Copy files from old to new (/favicon.ico)
+      #/bin/cp -f ./mediawiki-X.XX.X/favicon.ico ./mediawiki-Y.YY.Y/
+      ansible.builtin.copy:
+        src: "{{ mediawiki_target_dir }}/{{ mediawiki_old_dir }}/favicon.ico"
+        dest: "{{ mediawiki_target_dir }}/{{ mediawiki_download_file }}/"
+        owner: www-data
+        group: www-data
+        remote_src: true
+
+    - name: Update Apache Config (DocumentRoot)
+      lineinfile: 
+        path: "/etc/apache2/sites-available/001-wiki.conf"
+        regexp: "^    DocumentRoot*"
+        line: "    DocumentRoot /var/www/virtual/{{ mediawiki_download_file }}"
+        backrefs: yes
+      notify: Restart Apache
+
+    - name: Update Apache Config (Directory)
+      lineinfile: 
+        path: "/etc/apache2/sites-available/001-wiki.conf"
+        regexp: "^    <Directory*"
+        line: "    <Directory /var/www/virtual/{{ mediawiki_download_file }}>"
+        backrefs: yes
+      notify: Restart Apache
+
+    - name: Run Update Script
+      shell: "{{ update_command }}"
+      register: command_output # Register the output of the command
+      ignore_errors: yes       # Optional: if you want to continue even if the command fails
+
+    - name: Save the command output to a file
+      copy:
+        content: "{{ command_output.stdout }}"
+        dest: "/tmp/{{ mediawiki_download_file }}.log"
+
+  handlers:
+    - name: Reload Apache
+      service:
+        name: apache2
+        state: reloaded
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+
+
