@@ -3,15 +3,27 @@
   hosts: wikiserver
   become: yes
 
-##
-## Ansible Playbook to upgrade MediaWiki from one version to the next.
-## Written for Ubuntu and Apache2.
-## Assumes the root of the MediaWiki install is in /var/www/virtual/mediawiki-X.XX.X/
-## Switch versions by updating /etc/apache2/sites-available/001-wiki.conf to point to the new document root.
-## The output of the update command is captured and written to a log on the server in /tmp/
-##
-## Written by Jon Russell September 2024
-##
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+#
+#
+# Ansible Playbook to upgrade MediaWiki from one version to the next.
+# Written for Ubuntu and Apache2.
+# Assumes the root of the MediaWiki install is in /var/www/virtual/mediawiki-X.XX.X/
+# Switch versions by updating /etc/apache2/sites-available/001-wiki.conf to point to the new document root.
+# The output of the update command is captured and written to a log on the server in /tmp/
+#
+# Written by Jon Russell September 2024
+#
 
   vars:
     mediawiki_download_url: "https://releases.wikimedia.org/mediawiki"
@@ -35,14 +47,27 @@
     #mediawiki_download_file: "mediawiki-1.41.2"
     #mediawiki_download_dir: "1.41"
     #mediawiki_old_dir: "mediawiki-1.39.8"
-    #update_command: "php /var/www/virtual/mediawiki-1.41.2/maintenance/run.php update.php"
 
     ## To upgrade version 1.41.2 to 1.42.1
     ## Source: https://releases.wikimedia.org/mediawiki/1.42/mediawiki-1.42.1.tar.gz
-    mediawiki_download_file: "mediawiki-1.42.1"
-    mediawiki_download_dir: "1.42"
-    mediawiki_old_dir: "mediawiki-1.41.2"
-    update_command: "php /var/www/virtual/mediawiki-1.42.1/maintenance/run.php update.php"
+    #mediawiki_download_file: "mediawiki-1.42.1"
+    #mediawiki_download_dir: "1.42"
+    #mediawiki_old_dir: "mediawiki-1.41.2"
+
+    ## To upgrade version 1.42.1 to 1.43.0
+    ## Source: https://releases.wikimedia.org/mediawiki/1.43/mediawiki-1.43.0.tar.gz
+    #mediawiki_download_file: "mediawiki-1.43.0"
+    #mediawiki_download_dir: "1.43"
+    #mediawiki_old_dir: "mediawiki-1.42.1"
+
+    ## To upgrade version 1.43.0 to 1.44.1
+    ## Source: https://releases.wikimedia.org/mediawiki/1.44/mediawiki-1.44.1.tar.gz
+    mediawiki_download_file: "mediawiki-1.44.1"
+    mediawiki_download_dir: "1.44"
+    mediawiki_old_dir: "mediawiki-1.43.0"
+
+    update_command: "php {{ mediawiki_target_dir }}/{{ mediawiki_download_file }}/maintenance/run.php update.php"
+
 
   tasks:
     - name: Download the new MediaWiki tarball
